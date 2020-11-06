@@ -12,7 +12,7 @@ torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
 #####################################Read_and_Split_Dataset#############################################################
 
-data_path = '../cvpr2017/data/AWA/res101.mat'
+data_path = '../data/res101.mat'
 att_splits_path = os.path.join('../data/att_splits.mat')
 classes_txt_path = os.path.join('../data/trainvalclasses.txt')
 data = scio.loadmat(data_path)
@@ -23,11 +23,10 @@ features = torch.tensor(data['features'].T, dtype=torch.float)
 labels = data['labels'] - np.ones_like(data['labels'])  # (min:1,max:50) --> (min:0, max:49)
 labels = torch.tensor(labels)
 
-
 assert features.shape[0] == labels.shape[0]
 
 AWA_dataset = Data.TensorDataset(features, labels)
-batch_size = 5
+batch_size = 20
 shuffle_dataset = True
 random_seed = 42
 
@@ -45,8 +44,8 @@ print('train_dataset:{}\ntest_dataset:{}'.format(len(train_indices), len(val_ind
 train_sampler = Data.SubsetRandomSampler(train_indices)
 valid_sampler = Data.SubsetRandomSampler(val_indices)
 
-train_loader = Data.DataLoader(AWA_dataset, batch_size, sampler=train_sampler)
-validation_loader = Data.DataLoader(AWA_dataset, batch_size, sampler=valid_sampler)
+train_loader = Data.DataLoader(AWA_dataset, batch_size, sampler=train_sampler, drop_last=True)
+validation_loader = Data.DataLoader(AWA_dataset, batch_size, sampler=valid_sampler, drop_last=True)
 
 with open(classes_txt_path, 'r') as f:
     classes = [line.strip().replace('+', ' ') for line in f.readlines()]
@@ -62,8 +61,8 @@ class Net(nn.Module):
         self.optimizer = optim.SGD(net.parameters(self), lr=1e-3, momentum=0.9)
 
     def forward(self, x):
-        x = F.softmax(self.fc(x), dim=0)
-        return x
+        output = self.fc(x)
+        return output
 
 
 #####################################Training and saving model##########################################################
@@ -80,8 +79,8 @@ def training(net, num_epoch, dataset_loader, is_save_model=False):
             loss.backward()
             net.optimizer.step()
             _loss += loss.item()
-            if i % 1000 == 999:
-                print("[%d,%5d] loss: %.3f" % (epoch + 1, i + 1, _loss / 1000))
+            if i % 100 == 99:
+                print("[%d,%5d] loss: %.3f" % (epoch + 1, i + 1, _loss / 100))
                 _loss = 0.0
     print("Finished Training!")
 
@@ -96,21 +95,23 @@ def testing(net, dataset_loader, model_path='../saved_models/modelpara.pth'):
     net = net()
     if os.path.exists(model_path):
         net.load_state_dict(torch.load(model_path))
-
         correct = 0
         total = 0
 
-        for data in dataset_loader:
-            images, labels = data
-            outputs = net(images)
+        for (images, labels) in (dataset_loader):
+            outputs = F.softmax(net(images), dim=1)
             _, predited = torch.max(outputs.data, 1)
-            # predited.to(device)
-            total += labels.size(0)
-            correct += (predited == labels).sum().item()
+            labels = labels.cpu().numpy().squeeze()
+            predited_labels = predited.cpu().numpy().squeeze()
+            assert len(labels) == len(predited_labels)
+            total += len(labels)
 
+            # calculate accuracy rate
+            for j in range(len(labels)):
+                correct += (predited_labels[j] == labels[j]).sum().item()
         print('Accuracy of network on the test images: %.2f %%' % (100 * correct / total))
     else:
-        print("Error in loading model, please check wheather you have save model in ../saved_models/")
+        print("Error in loading model, please check weather you have save model in ../saved_models/")
 
 
 #####################################Parameters of runing this procedure################################################

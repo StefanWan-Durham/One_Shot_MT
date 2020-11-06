@@ -91,9 +91,16 @@ def generated_word_embedding(labels_csv_path, save_features_path=data_path):
 
 
 """
-
+generate fake visual feature(add noise)
 
 :param
+data_path: path to the saved word embedding
+num_fake_features: the number of fake samples
+
+add_constraint_condition: 
+True--> add noise between min value and max value; 
+False: -8～4(I am not sure this set is reasonable)
+
 """
 
 

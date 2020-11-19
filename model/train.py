@@ -15,19 +15,21 @@ import scipy.io as scio
 tdata_path = os.path.join('../data')
 t_net_save_path = os.path.join(tdata_path, 'saved_models')
 
-
 ##############################prepare fake dataset#####################################################################
 # import fake samples
 
-def obtain_fake_features(f_num, nos_len):
+vf_path = os.path.join('../data/trainvalclasses_WE')
+
+
+def obtain_fake_features(vf_path, f_num, nos_len):
     g = Generated_Fake_Features()
     # noise length
-    features, labels = g.generate_fake_features(f_num, nos_len)
+    features, labels = g.generate_fake_features(vf_path, f_num, nos_len)
     dataset = Data.TensorDataset(features, labels)
     return dataset
 
 
-dataset = obtain_fake_features(400, 200)
+dataset = obtain_fake_features(vf_path,400, 200)
 
 ############################################# init G_net C_net T_net ###################################################
 
@@ -185,11 +187,11 @@ for i in range(epoch):
             print("[%d,%5d] loss: %.3f" % (epoch + 1, i + 1, loss_f / 100))
     print('Finished train G and F net')
 
-print('*'*50)
-print('*'*50)
+print('*' * 50)
+print('*' * 50)
 ############################################# save C model ####################################################
 torch.save(f_net.state_dict(), '../data/saved_models/model_f.pth')
-print('you have saved the model in the file of "../saved_models"')
+print('you have saved the model in the file of "../data/saved_models"')
 
 ############################################# load test data ####################################################
 data_path = '../data/res101.mat'
@@ -205,6 +207,8 @@ all_labels = data['labels']
 
 #
 def map_features(all_features, all_labels, index):
+    all_features = all_features.astype(np.float32)
+    all_labels = all_labels.astype(np.float32)
     samples_index = all_labels[index].squeeze()
     unique_labels = np.sort(np.unique(samples_index))
 
@@ -227,7 +231,7 @@ def map_features(all_features, all_labels, index):
 
 
 test_seen_dataset = map_features(all_features, all_labels, test_seen_indices)
-validation_loader = Data.DataLoader(test_seen_dataset, 20, shuffle=True,drop_last=True)
+validation_loader = Data.DataLoader(test_seen_dataset, 20, shuffle=True, drop_last=True)
 ############################################# test ####################################################
 test_f_net = nets.F_Net(f_input_dim, f_hidden_dim, f_output_dim)
 test_f_net.load_state_dict(torch.load('../data/saved_models/model_f.pth'))
@@ -246,4 +250,3 @@ for (images, labels) in (validation_loader):
     for j in range(len(labels)):
         correct += (predited_labels[j] == labels[j]).sum().item()
 print('Accuracy of network on the test images: %.2f %%' % (100 * correct / total))
-

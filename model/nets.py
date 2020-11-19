@@ -6,8 +6,8 @@ import torch.nn as nn
 # init weights
 def weight_init(m):
     if isinstance(m, nn.Linear):
-        nn.init.xavier_normal(m.weight)
-        nn.init.constant(m.bias, 0)
+        nn.init.xavier_normal_(m.weight)
+        nn.init.constant_(m.bias, 0)
 
 
 # G Net: GAN 788-->4096-->2048
@@ -41,7 +41,7 @@ class C_Net(nn.Module):
         super(C_Net, self).__init__()
         self.fc1 = nn.Linear(input_dim, hidden_dim)
         self.fc2 = nn.Linear(hidden_dim, output_dim)
-        self.lRelu = nn.LeakyReLU(0.2,True)
+        self.lRelu = nn.LeakyReLU(0.2, True)
         self.sigmod = nn.Sigmoid()
 
         self.apply(weight_init)
@@ -52,13 +52,14 @@ class C_Net(nn.Module):
 
         return output
 
+
 # F Net: for test  2048-->1024-->40 / 2048--1024-->10
 class F_Net(nn.Module):
-    def __init__(self,input_dim, hidden_dim, output_dim):
-        super(F_Net,self).__init__()
+    def __init__(self, input_dim, hidden_dim, output_dim):
+        super(F_Net, self).__init__()
         self.fc1 = nn.Linear(input_dim, hidden_dim)
         self.fc2 = nn.Linear(hidden_dim, output_dim)
-        self.lRelu = nn.LeakyReLU()
+        self.lRelu = nn.LeakyReLU(0.2, True)
 
         self.apply(weight_init)
 

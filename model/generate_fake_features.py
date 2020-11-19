@@ -9,6 +9,7 @@ import os
 class Generated_Fake_Features:
     def __init__(self):
         self.data_path = os.path.join("../data")
+        # self.word_embedding_path = os.path.join('../data/trainvalclasses_WE')
 
     """
     1. Obatin labels of 40 seen classes. (txt file--> csv file)
@@ -103,41 +104,54 @@ class Generated_Fake_Features:
     
     """
 
-    def generate_fake_features(original_features_path, num_fake_features=20, add_constraint_condition=True):
-        samples = []
+    def generate_fake_features(self, word_embedding_path, fake_sample_nums, noise_len, add_constraint_condition=True):
+        features = []
+        labels = []
+        syn_features = []
+        syn_labels = []
 
-        vs_files = [i for i in os.listdir(original_features_path) if i.endswith('.mat')]
+        vs_files = [i for i in os.listdir(word_embedding_path) if i.endswith('.mat')]
         for _ in vs_files:
-            visual_data = scio.loadmat(os.path.join(original_features_path, _))
+            visual_data = scio.loadmat(os.path.join(word_embedding_path, _))
             feature = visual_data['feat_v'][0][0][0]
             label = visual_data['GT'].squeeze()
-            samples.append([feature, label])
+            # samples.append([feature, label])
+            features.append(feature)
+            labels.append(label)
 
-        fake_samples = []
         if add_constraint_condition:
-            for i in range(len(samples)):
-                for j in range(num_fake_features):
-                    min_value = samples[i][0].min()
-                    max_value = samples[i][0].max()
-                    noise = np.random.uniform(min_value, max_value, num_fake_features)
-                    fake_sample = [np.hstack([samples[i][0], noise]), samples[i][1]]
-                    fake_samples.append(fake_sample)
-            return fake_samples
+            for i in range(len(features)):
+
+                min_value = features[i].min()
+                max_value = features[i].max()
+
+                for j in range(fake_sample_nums):
+                    noise = np.random.uniform(min_value, max_value, noise_len)
+                    syn_feature = np.hstack([features[i], noise])
+                    syn_label = labels[i]
+                    syn_features.append(syn_feature)
+                    syn_labels.append(syn_label / 1.0)
+
+            syn_features = torch.Tensor(syn_features).cuda()
+            syn_labels = torch.Tensor(syn_labels).cuda()
+            print('generate {} fake features from {}'.format(len(vs_files), len(syn_features)))
+            return syn_features, syn_labels
 
         else:
-            for i in range(samples):
-                for j in range(num_fake_features):
-                    noise = np.random.uniform(-8, 4, num_fake_features)
-                    fake_sample = [np.hstack([samples[i][0], noise]), samples[i][1]]
-                    fake_samples.append(fake_sample)
-            return fake_samples
+            for i in range(len(features)):
+                for j in range(fake_sample_nums):
+                    noise = np.random.rand(noise_len)
+                    syn_feature = np.hstack([features[i], noise])
+                    syn_label = labels[i]
+                    syn_features.append(syn_feature)
+                    syn_labels.append(syn_label / 1.0)
 
-        # store fake feature in json file
-        # file_to_save_fd = os.path.join(data_path, 'fake_data', '{}_visual_features.csv'.format(len(fake_samples)))
-        # data = pd.DataFrame(fake_samples)
-        # data.to_csv(file_to_save_fd)
+            syn_features = torch.Tensor(syn_features).cuda()
+            syn_labels = torch.Tensor(syn_labels).cuda()
+            print('generate {} fake features from {}'.format(len(vs_files), len(syn_features)))
+            return syn_features, syn_labels
 
-        # print('fake features has stored in {}'.format(file_to_save_fd))
+
 
 # if __name__ == '__main__':
 #     # 1. Obatin labels of 40 seen classes. (txt file--> csv file)

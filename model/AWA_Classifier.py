@@ -38,7 +38,7 @@ if shuffle_dataset:
     np.random.shuffle(train_indices)
     np.random.shuffle(val_indices)
 
-print('train_dataset:{}\ntest_dataset:{}'.format(len(train_indices), len(val_indices)))
+# print('train_dataset:{}\ntest_dataset:{}'.format(len(train_indices), len(val_indices)))
 
 # creating data samplers and loaders
 train_sampler = Data.SubsetRandomSampler(train_indices)
@@ -58,7 +58,7 @@ class Net(nn.Module):
         super(Net, self).__init__()
         self.fc = nn.Linear(2048, 50)
         self.criterion = nn.CrossEntropyLoss()
-        self.optimizer = optim.SGD(net.parameters(self), lr=1e-3, momentum=0.9)
+        self.optimizer = optim.SGD(self.parameters(), lr=1e-3, momentum=0.9)
 
     def forward(self, x):
         output = self.fc(x)
